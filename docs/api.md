@@ -46,7 +46,7 @@ Generate a response for a given prompt with a provided model. This is a streamin
 
 Advanced parameters (optional):
 
-- `format`: the format to return a response in. Format can be `json` or a JSON schema
+- `format`: the format to return a response in. Format can be `json`, a JSON schema, or GBNF grammar
 - `options`: additional model parameters listed in the documentation for the [Modelfile](./modelfile.md#valid-parameters-and-values) such as `temperature`
 - `system`: system message to (overrides what is defined in the `Modelfile`)
 - `template`: the prompt template to use (overrides what is defined in the `Modelfile`)
@@ -57,7 +57,7 @@ Advanced parameters (optional):
 
 #### Structured outputs
 
-Structured outputs are supported by providing a JSON schema in the `format` parameter. The model will generate a response that matches the schema. See the [structured outputs](#request-structured-outputs) example below.
+Structured outputs are supported by providing a JSON schema or directly passing GBNF grammar in the `format` parameter. The model will generate a response that matches the schema or the grammar. See the [structured outputs](#request-structured-outputs) example below.
 
 #### JSON mode
 
@@ -289,6 +289,38 @@ The value of `response` will be a string containing JSON similar to:
 }
 ```
 
+#### Request (GBNF grammar)
+
+##### Request
+
+```shell
+curl -X POST http://localhost:11434/api/generate -H "Content-Type: application/json" -d '{
+  "model": "llama3.2",
+  "prompt": "Ollama is 22 years old and is busy saving the world. Respond in the format Attribute: value for attributes name and age",
+  "stream": false,
+  "format": "root ::= \"name: \" [a-zA-Z]+ \", age: \" [0-9]+"
+}'
+```
+
+##### Response
+
+```json
+{
+  "model": "llama3.2",
+  "created_at": "2025-01-05T05:26:38.531479759Z",
+  "response": "name: Ollama, age: 22",
+  "done": true,
+  "done_reason": "stop",
+  "context": [1, 2, 3],
+  "total_duration": 132473613,
+  "load_duration": 20433394,
+  "prompt_eval_count": 52,
+  "prompt_eval_duration": 3000000,
+  "eval_count": 11,
+  "eval_duration": 107000000
+}
+```
+
 #### Request (with images)
 
 To submit images to multimodal models such as `llava` or `bakllava`, provide a list of base64-encoded `images`:
@@ -506,14 +538,14 @@ The `message` object has the following fields:
 
 Advanced parameters (optional):
 
-- `format`: the format to return a response in. Format can be `json` or a JSON schema. 
+- `format`: the format to return a response in. Format can be `json`, a JSON schema, or GBNF grammar
 - `options`: additional model parameters listed in the documentation for the [Modelfile](./modelfile.md#valid-parameters-and-values) such as `temperature`
 - `stream`: if `false` the response will be returned as a single response object, rather than a stream of objects
 - `keep_alive`: controls how long the model will stay loaded into memory following the request (default: `5m`)
 
 ### Structured outputs
 
-Structured outputs are supported by providing a JSON schema in the `format` parameter. The model will generate a response that matches the schema. See the [Chat request (Structured outputs)](#chat-request-structured-outputs) example below.
+Structured outputs are supported by providing a JSON schema or directly passing GBNF grammar in the `format` parameter. The model will generate a response that matches the schema or the grammar. See the [Chat request (Structured outputs)](#chat-request-structured-outputs) example below.
 
 ### Examples
 
@@ -650,6 +682,40 @@ curl -X POST http://localhost:11434/api/chat -H "Content-Type: application/json"
   "prompt_eval_duration": 1502000000,
   "eval_count": 12,
   "eval_duration": 175000000
+}
+```
+
+#### Chat request (GBNF grammar)
+
+##### Request
+
+```shell
+curl -X POST http://localhost:11434/api/chat -H "Content-Type: application/json" -d '{
+  "model": "llama3.2",
+  "messages": [{"role": "user", "content": "Ollama is 22 years old and busy saving the world. Respond in the format Attribute: value for attributes name and age."}],
+  "stream": false,
+  "format": "root ::= \"name: \" [a-zA-Z]+ \", age: \" [0-9]+",
+  "options": {
+    "temperature": 0
+  }
+}'
+```
+
+##### Response
+
+```json
+{
+  "model": "llama3.2",
+  "created_at": "2025-01-05T05:32:11.556299109Z",
+  "message": { "role": "assistant", "content": "name: Ollama, age: 22" },
+  "done_reason": "stop",
+  "done": true,
+  "total_duration": 135688590,
+  "load_duration": 23979976,
+  "prompt_eval_count": 52,
+  "prompt_eval_duration": 14000000,
+  "eval_count": 11,
+  "eval_duration": 97000000
 }
 ```
 

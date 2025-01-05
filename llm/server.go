@@ -708,16 +708,23 @@ func (s *llmServer) Completion(ctx context.Context, req CompletionRequest, fn fu
 		case `"json"`:
 			request["grammar"] = grammarJSON
 		default:
-			if req.Format[0] != '{' {
-				return fmt.Errorf("invalid format: %q; expected \"json\" or a valid JSON Schema object", req.Format)
+			if req.Format[0] == '{' {
+				// User provided a JSON schema
+				g := llama.SchemaToGrammar(req.Format)
+				if g == nil {
+					return fmt.Errorf("invalid JSON schema in format")
+				}
+				request["grammar"] = string(g)
+			} else if req.Format[0] == '"' && bytes.Contains(req.Format, []byte("root ::=")) {
+				var format string
+				err := json.Unmarshal(req.Format, &format)
+				if err != nil {
+					return fmt.Errorf("invalid JSON in format field")
+				}
+				request["grammar"] = format
+			} else {
+				return fmt.Errorf("invalid format: %q; expected \"json\", a valid JSON Schema object, or GBNF grammar that contains 'root ::='", req.Format)
 			}
-
-			// User provided a JSON schema
-			g := llama.SchemaToGrammar(req.Format)
-			if g == nil {
-				return fmt.Errorf("invalid JSON schema in format")
-			}
-			request["grammar"] = string(g)
 		}
 	}
 
